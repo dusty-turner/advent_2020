@@ -381,7 +381,7 @@ summary {
 
 <div id="seventh-day-of-advent" class="section level2">
 <h2>Seventh Day of Advent</h2>
-<pre class="r"><code>source(here::here(&quot;advent7data.R&quot;))
+<pre class="r"><code>source(here::here(&quot;data_files&quot;, &quot;advent7data.R&quot;))
 
 df_of_bags &lt;-
 tibble(advent7data) %&gt;% 
@@ -456,7 +456,8 @@ bags_of_interest &lt;-
 <div id="sixth-day-of-advent" class="section level2">
 <h2>Sixth Day of Advent</h2>
 <pre class="r"><code>library(tidytext)
-source(here::here(&quot;advent6data.R&quot;))
+
+source(here::here(&quot;data_files&quot;, &quot;advent6data.R&quot;))
 
 tibble(advent6data) %&gt;%
   separate_rows(advent6data, sep = c(&quot;\n\n&quot;)) %&gt;%
@@ -503,7 +504,7 @@ tibble(advent6data) %&gt;%
 </div>
 <div id="fifth-day-of-advent" class="section level2">
 <h2>Fifth Day of Advent</h2>
-<pre class="r"><code>source(here::here(&quot;advent5data.R&quot;))
+<pre class="r"><code>source(here::here(&quot;data_files&quot;, &quot;advent5data.R&quot;))
 seats &lt;- 
 tibble(advent5data) %&gt;% 
   mutate(first = if_else(str_sub(string = advent5data,start = 1,end = 1) == &quot;F&quot;, 0, 64)) %&gt;% 
@@ -555,7 +556,7 @@ seats %&gt;%
 </div>
 <div id="fourth-day-of-advent" class="section level2">
 <h2>Fourth Day of Advent</h2>
-<pre class="r"><code>source(here::here(&quot;advent4data.R&quot;))
+<pre class="r"><code>source(here::here(&quot;data_files&quot;, &quot;advent4data.R&quot;))
 # advent4data
 
 tibble(advent4data) %&gt;%
@@ -598,7 +599,7 @@ tibble(advent4data) %&gt;%
 </div>
 <div id="third-day-of-advent" class="section level2">
 <h2>Third Day of Advent</h2>
-<pre class="r"><code>source(here::here(&quot;advent3data.R&quot;))
+<pre class="r"><code>source(here::here(&quot;data_files&quot;, &quot;advent3data.R&quot;))
 
 
 repper &lt;- function(vector = advent3data[1]){
@@ -685,7 +686,7 @@ bind_rows(first_group,second_group) %&gt;%
 </div>
 <div id="second-day-of-advent" class="section level2">
 <h2>Second Day of Advent</h2>
-<pre class="r"><code>source(here::here(&quot;advent2data.R&quot;))
+<pre class="r"><code>source(here::here(&quot;data_files&quot;, &quot;advent2data.R&quot;))
 # advent2data
 
 tibble(advent2data) %&gt;% 
@@ -714,7 +715,7 @@ tibble(advent2data) %&gt;%
 </div>
 <div id="first-day-of-advent" class="section level2">
 <h2>First Day of Advent</h2>
-<pre class="r"><code>source(here::here(&quot;advent1data.R&quot;))
+<pre class="r"><code>source(here::here(&quot;data_files&quot;, &quot;advent1data.R&quot;))
 
 advent_1  &lt;- function(vector, lag) {
   tibble(vector = vector) %&gt;%
@@ -744,23 +745,26 @@ expand_grid(one = 1:length(advent1data), two = 1:length(advent1data)) %&gt;%
   filter(two &gt; one) %&gt;% 
   furrr::future_pmap_dfr(.f = ~advent_2(vector = advent1data, lag_1 = .x, lag_2 = .y), .progress = T) </code></pre>
 <pre><code>## 
- Progress: ----------------------                                                                                                                                       100%
- Progress: ----------------------------------                                                                                                                           100%
- Progress: --------------------------------------------                                                                                                                 100%
- Progress: -----------------------------------------------------                                                                                                        100%
- Progress: -------------------------------------------------------------                                                                                                100%
- Progress: ---------------------------------------------------------------------                                                                                        100%
- Progress: ----------------------------------------------------------------------------                                                                                 100%
- Progress: -----------------------------------------------------------------------------------                                                                          100%
- Progress: ------------------------------------------------------------------------------------------                                                                   100%
- Progress: ------------------------------------------------------------------------------------------------                                                             100%
- Progress: -------------------------------------------------------------------------------------------------------                                                      100%
- Progress: ---------------------------------------------------------------------------------------------------------------                                              100%
- Progress: -----------------------------------------------------------------------------------------------------------------------                                      100%
+ Progress: -------------------                                                                                                                                          100%
+ Progress: -------------------------------                                                                                                                              100%
+ Progress: ----------------------------------------                                                                                                                     100%
+ Progress: -------------------------------------------------                                                                                                            100%
+ Progress: ---------------------------------------------------------                                                                                                    100%
+ Progress: -----------------------------------------------------------------                                                                                            100%
+ Progress: ------------------------------------------------------------------------                                                                                     100%
+ Progress: -------------------------------------------------------------------------------                                                                              100%
+ Progress: -------------------------------------------------------------------------------------                                                                        100%
+ Progress: --------------------------------------------------------------------------------------------                                                                 100%
+ Progress: --------------------------------------------------------------------------------------------------                                                           100%
+ Progress: ---------------------------------------------------------------------------------------------------------                                                    100%
+ Progress: -----------------------------------------------------------------------------------------------------------------                                            100%
+ Progress: ------------------------------------------------------------------------------------------------------------------------                                     100%
  Progress: -------------------------------------------------------------------------------------------------------------------------------                              100%
- Progress: ----------------------------------------------------------------------------------------------------------------------------------------                     100%
- Progress: ------------------------------------------------------------------------------------------------------------------------------------------------             100%
+ Progress: -------------------------------------------------------------------------------------------------------------------------------------                        100%
+ Progress: --------------------------------------------------------------------------------------------------------------------------------------------                 100%
+ Progress: ---------------------------------------------------------------------------------------------------------------------------------------------------          100%
  Progress: -------------------------------------------------------------------------------------------------------------------------------------------------------      100%
+ Progress: --------------------------------------------------------------------------------------------------------------------------------------------------------     100%
  Progress: ------------------------------------------------------------------------------------------------------------------------------------------------------------ 100%</code></pre>
 <pre class="r"><code>answer_2</code></pre>
 <pre><code>## # A tibble: 1 x 4

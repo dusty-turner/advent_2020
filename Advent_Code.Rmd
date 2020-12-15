@@ -16,7 +16,7 @@ library(tidyverse)
 ## Seventh Day of Advent
 
 ```{r}
-source(here::here("advent7data.R"))
+source(here::here("data_files", "advent7data.R"))
 
 df_of_bags <-
 tibble(advent7data) %>% 
@@ -81,7 +81,8 @@ bag_breakdown <-
 
 ```{r}
 library(tidytext)
-source(here::here("advent6data.R"))
+
+source(here::here("data_files", "advent6data.R"))
 
 tibble(advent6data) %>%
   separate_rows(advent6data, sep = c("\n\n")) %>%
@@ -105,7 +106,7 @@ tibble(advent6data) %>%
 ## Fifth Day of Advent
 
 ```{r}
-source(here::here("advent5data.R"))
+source(here::here("data_files", "advent5data.R"))
 seats <- 
 tibble(advent5data) %>% 
   mutate(first = if_else(str_sub(string = advent5data,start = 1,end = 1) == "F", 0, 64)) %>% 
@@ -143,7 +144,7 @@ seats %>%
 ## Fourth Day of Advent
 
 ```{r}
-source(here::here("advent4data.R"))
+source(here::here("data_files", "advent4data.R"))
 # advent4data
 
 tibble(advent4data) %>%
@@ -185,7 +186,7 @@ tibble(advent4data) %>%
 ## Third Day of Advent
 
 ```{r}
-source(here::here("advent3data.R"))
+source(here::here("data_files", "advent3data.R"))
 
 
 repper <- function(vector = advent3data[1]){
@@ -262,7 +263,7 @@ bind_rows(first_group,second_group) %>%
 ## Second Day of Advent
 
 ```{r}
-source(here::here("advent2data.R"))
+source(here::here("data_files", "advent2data.R"))
 # advent2data
 
 tibble(advent2data) %>% 
@@ -296,7 +297,7 @@ tibble(advent2data) %>%
 ## First Day of Advent
 
 ```{r}
-source(here::here("advent1data.R"))
+source(here::here("data_files", "advent1data.R"))
 
 advent_1  <- function(vector, lag) {
   tibble(vector = vector) %>%
