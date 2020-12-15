@@ -1,0 +1,334 @@
+---
+title: "Advent Cdoe"
+author: "Dusty Turner"
+date: "12/13/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = F, message = F)
+```
+
+```{r, include=FALSE}
+library(tidyverse)
+```
+
+## Seventh Day of Advent
+
+```{r}
+source(here::here("advent7data.R"))
+
+df_of_bags <-
+tibble(advent7data) %>% 
+  separate_rows(advent7data, sep = "\n") %>% 
+  mutate(id = row_number()) %>% 
+  relocate(id)
+
+bag_searcher <- function(inner_bag = "shiny gold", data_input = first_pass){
+bags_of_interest <-
+  data_input %>% 
+  filter(str_detect(string = advent7data, pattern = inner_bag)) %>% 
+  mutate(outter_bag = word(string = advent7data, start = 1,end = 2)) %>% 
+  filter(outter_bag != inner_bag) %>% 
+  summarise(outter_bag = str_c(outter_bag,collapse = "|")) %>% 
+  pull(outter_bag)
+  
+  return(bags_of_interest)
+}
+
+# answer <-
+  "shiny gold" %>%
+  bag_searcher(data_input = df_of_bags) %>% 
+  bag_searcher(data_input = df_of_bags) %>% 
+  bag_searcher(data_input = df_of_bags) %>% 
+  bag_searcher(data_input = df_of_bags) %>% 
+  bag_searcher(data_input = df_of_bags) %>% 
+  bag_searcher(data_input = df_of_bags) %>% 
+  bag_searcher(data_input = df_of_bags) %>% 
+  bag_searcher(data_input = df_of_bags) %>% 
+  bag_searcher(data_input = df_of_bags) %>% 
+  bag_searcher(data_input = df_of_bags) %>% 
+  bag_searcher(data_input = df_of_bags) %>% 
+  tibble() %>% 
+  janitor::clean_names() %>% 
+    rename(bags = x) %>% 
+    separate_rows(bags, sep = "\\|") 
+  
+bag_breakdown <-
+  df_of_bags %>% 
+    mutate(outter_bag = word(string = advent7data, start = 1, end = 2)) %>% 
+    tidyr::separate(col = advent7data, into = c(NA, "inner"),sep = "contain ") %>% 
+    separate_rows(inner, sep = ",") %>% 
+    mutate(inner = str_trim(string = inner)) %>% 
+    mutate(num_bags = as.numeric(str_sub(string = inner, start = 1, end = 1))) %>% 
+    mutate(num_bags = replace_na(data = num_bags,replace = 0)) %>% 
+  mutate(inner = word(string = inner, start = 2,end = 3)) %>% 
+  relocate(id, outter_bag, inner, num_bags)
+  
+# test <-
+# bag_breakdown %>% 
+#   filter(outter_bag == "shiny gold") %>% 
+#   # filter(num_bags != 0) %>% 
+#   select(inner, multiplier = num_bags)
+# 
+# bag_breakdown %>% 
+#   filter(outter_bag %in% test$inner) %>% 
+#   left_join(test, by = c("outter_bag" = "inner"))
+
+```
+
+## Sixth Day of Advent
+
+```{r}
+library(tidytext)
+source(here::here("advent6data.R"))
+
+tibble(advent6data) %>%
+  separate_rows(advent6data, sep = c("\n\n")) %>%
+  mutate(id = row_number()) %>%
+  mutate(advent6data = str_remove_all(string = advent6data, pattern = "\n")) %>% 
+  unnest_characters(word, advent6data) %>% 
+  distinct(id,word)
+  
+tibble(advent6data) %>%
+  separate_rows(advent6data, sep = c("\n\n")) %>%
+  mutate(id = row_number()) %>% 
+  mutate(people_in_group = str_count(string = advent6data, pattern = "\n")+1) %>% 
+  mutate(advent6data = str_remove_all(string = advent6data, pattern = "\n")) %>% 
+  unnest_characters(word, advent6data) %>% 
+  count(id, word, people_in_group) %>% 
+  filter(people_in_group == n)
+  
+```
+
+
+## Fifth Day of Advent
+
+```{r}
+source(here::here("advent5data.R"))
+seats <- 
+tibble(advent5data) %>% 
+  mutate(first = if_else(str_sub(string = advent5data,start = 1,end = 1) == "F", 0, 64)) %>% 
+  mutate(secon = if_else(str_sub(string = advent5data,start = 2,end = 2) == "F", 0, 32)) %>% 
+  mutate(third = if_else(str_sub(string = advent5data,start = 3,end = 3) == "F", 0, 16)) %>% 
+  mutate(forth = if_else(str_sub(string = advent5data,start = 4,end = 4) == "F", 0, 8)) %>% 
+  mutate(fifth = if_else(str_sub(string = advent5data,start = 5,end = 5) == "F", 0, 4)) %>% 
+  mutate(sixth = if_else(str_sub(string = advent5data,start = 6,end = 6) == "F", 0, 2)) %>% 
+  mutate(seven = if_else(str_sub(string = advent5data,start = 7,end = 7) == "F", 0, 1)) %>% 
+  mutate(side1 = if_else(str_sub(string = advent5data,start = 8,end = 8) == "L", 0, 4)) %>% 
+  mutate(side2 = if_else(str_sub(string = advent5data,start = 9,end = 9) == "L", 0, 2)) %>% 
+  mutate(side3 = if_else(str_sub(string = advent5data,start = 10,end = 10) == "L", 0, 1)) %>%
+  rowwise() %>% 
+  mutate(rows = sum(first,secon,third,forth,fifth,sixth,seven)) %>% 
+  mutate(seat = sum(side1,side2,side3)) %>% 
+  ungroup() %>% 
+  mutate(seatid = rows * 8 + seat) 
+
+seats %>% 
+  filter(seatid == max(seatid))
+
+seats %>% 
+  arrange(rows, seat) %>% as.data.frame() %>% 
+  mutate(distance = seatid - lag(seatid,1)) %>% 
+  filter(distance != 1)
+
+seats %>% 
+  arrange(rows, seat) %>% as.data.frame() %>% 
+  filter(seatid %in% 715:720)
+  
+```
+
+
+
+## Fourth Day of Advent
+
+```{r}
+source(here::here("advent4data.R"))
+# advent4data
+
+tibble(advent4data) %>%
+  separate_rows(advent4data, sep = c("\n  \n|\n    \n")) %>% 
+  mutate(ids = str_count(string = advent4data,pattern = c("byr|iyr|eyr|hgt|hcl|ecl|pid"))) %>% 
+  count(ids) %>% 
+  arrange(desc(ids))
+  
+tibble(advent4data) %>%
+  separate_rows(advent4data, sep = c("\n  \n|\n    \n")) %>% 
+  mutate(ids = str_count(string = advent4data,pattern = c("byr|iyr|eyr|hgt|hcl|ecl|pid"))) %>% 
+  filter(ids == 7) %>% 
+  mutate(advent4data = str_replace_all(string = advent4data, pattern = "\n", replacement = " ")) %>% 
+  mutate(ids = row_number()) %>% 
+  separate_rows(advent4data, sep = " ") %>% 
+  filter(advent4data != "") %>% 
+  separate(col = advent4data, into = c("name", "value"), sep = ":") %>% 
+  # select(-ids) %>% 
+  # group_by(ids) %>% 
+  pivot_wider(names_from = name, values_from = value) %>% 
+  select(-cid) %>% 
+  mutate(across(.cols = c("byr","eyr","iyr"), .fns = ~as.numeric(.))) %>% 
+  filter(byr >= 1920 & byr <= 2002 ) %>% 
+  filter(iyr <= 2020 & iyr >= 2010) %>% 
+  filter(eyr <= 2030 & eyr >= 2020) %>% 
+  filter(str_detect(string = hgt,pattern = "cm") | str_detect(string = hgt,pattern = "in")) %>% 
+  mutate(ht = as.numeric(str_remove_all(string = hgt, pattern = c("cm|in")))) %>%
+  filter(c(str_detect(string = hgt, pattern = "cm") & ht >= 150 & ht <= 193) | c(str_detect(string = hgt, pattern = "in") & ht >= 59 & ht <= 76)) %>% 
+  filter(str_sub(string = hcl,start = 1,end = 1)=="#") %>% 
+  filter(str_length(string = hcl)==7) %>% 
+  filter(ecl %in% c("amb", "blu", "brn", "gry", "grn", "hzl", "oth")) %>% 
+  filter(str_length(pid)==9) %>% 
+  nrow()
+  
+  
+```
+
+
+## Third Day of Advent
+
+```{r}
+source(here::here("advent3data.R"))
+
+
+repper <- function(vector = advent3data[1]){
+  tibble(slope = vector %>% rep(967/3) %>% str_c(collapse = ""))
+}
+
+character_of_interest <- seq(from = 1, to = 967, by = 3)
+length(character_of_interest)
+
+advent3data[1] %>% repper()
+
+slope <-
+  advent3data %>% purrr::map_dfr(.f = ~ repper(.x))
+
+slope %>% 
+  mutate(character_of_interest = character_of_interest) %>% 
+  mutate(n = nchar(slope)) %>% 
+  mutate(obstacle = str_sub(string = slope, start = character_of_interest, end = character_of_interest)) %>% 
+  count(obstacle)
+```
+
+
+```{r}
+one_by_one <- seq(from = 1, by = 1, length.out = 323)
+three_by_one <- seq(from = 1, by = 3, length.out = 323)
+five_by_one <- seq(from = 1, by = 5, length.out = 323)
+seven_by_one <- seq(from = 1, by = 7, length.out = 323)
+
+one_by_two <- seq(from = 1, by = 1, length.out = 162)
+length(three_by_one)
+
+
+repper <- function(vector = advent3data[1]){
+  tibble(slope = vector %>% rep(967/3) %>% str_c(collapse = ""))
+}
+
+
+advent3data[1] %>% repper()
+
+slope <-
+  advent3data %>% purrr::map_dfr(.f = ~ repper(.x))
+
+slope_fun <- function(vec){
+slope %>% 
+  mutate(character_of_interest = vec) %>% 
+  mutate(n = nchar(slope)) %>% 
+  mutate(obstacle = str_sub(string = slope, start = character_of_interest, end = character_of_interest)) %>% 
+  count(obstacle) %>% 
+    mutate(id = vec[2]-vec[1])
+}
+
+first_group <-
+list(one_by_one,three_by_one,five_by_one,seven_by_one) %>% 
+  purrr::map_dfr(.f = ~slope_fun(.x))
+
+slope_fun(vec = three_by_one) 
+
+second_group <-
+slope %>% 
+  filter(row_number() %in% seq(from = 1, to = 323, by = 2)) %>% 
+  mutate(character_of_interest = one_by_two) %>% 
+  mutate(n = nchar(slope)) %>% 
+  mutate(obstacle = str_sub(string = slope, start = character_of_interest, end = character_of_interest)) %>% 
+  count(obstacle) %>% 
+  mutate(id = character_of_interest[2]-character_of_interest[1]+10)
+
+
+bind_rows(first_group,second_group) %>% 
+  filter(obstacle == "#") %>% pull(n) %>% prod() %>% tibble()
+
+```
+
+
+## Second Day of Advent
+
+```{r}
+source(here::here("advent2data.R"))
+# advent2data
+
+tibble(advent2data) %>% 
+  mutate(id = row_number()) %>% 
+  tidyr::separate(col = advent2data, into = c("first", "password"), sep = ": ") %>% 
+  tidyr::separate(col = first, into = c("digits", "letter"), sep = " ")  %>% 
+  tidyr::separate(col = digits, into = c("first", "second"), sep = "-") %>% 
+  mutate(across(.cols = c("first","second"),.fns = ~as.integer(.))) %>% 
+  mutate(count = str_count(string = password, pattern = letter)) %>% 
+  relocate(id) %>% 
+  filter(count <= second & count >= first) %>% 
+  nrow()
+  
+  
+tibble(advent2data) %>% 
+  mutate(id = row_number()) %>% 
+  tidyr::separate(col = advent2data, into = c("first", "password"), sep = ": ") %>% 
+  tidyr::separate(col = first, into = c("digits", "letter"), sep = " ")  %>% 
+  tidyr::separate(col = digits, into = c("first", "second"), sep = "-") %>% 
+  mutate(across(.cols = c("first","second"),.fns = ~as.integer(.))) %>% 
+  mutate(slot_a = str_sub(string = password, start = first,end = first)) %>% 
+  mutate(slot_b = str_sub(string = password, start = second,end = second)) %>% 
+  filter(slot_a != slot_b) %>% 
+  filter(slot_a == letter | slot_b == letter) %>% 
+  nrow()
+
+
+```
+
+
+## First Day of Advent
+
+```{r}
+source(here::here("advent1data.R"))
+
+advent_1  <- function(vector, lag) {
+  tibble(vector = vector) %>%
+    mutate(vector2 = lag(vector, lag)) %>% 
+    filter(vector + vector2 == 2020) %>% 
+    mutate(answer = vector * vector2)
+} 
+
+1:length(advent1data) %>%
+  purrr::map_dfr(.f = ~advent_1(vector = advent1data, lag = .x)) %>% 
+  pull(answer)
+
+```
+
+```{r}
+library(tidyverse)
+library(furrr)
+plan(multiprocess)
+
+advent_2  <- function(vector, lag_1, lag_2) {
+  tibble(vector = vector) %>%
+    mutate(vector2 = lag(vector, lag_1)) %>% 
+    mutate(vector3 = lag(vector, lag_2)) %>% 
+    filter(vector + vector2 + vector3 == 2020) %>% 
+    mutate(answer = vector * vector2 * vector3)
+} 
+
+answer_2 <-
+expand_grid(one = 1:length(advent1data), two = 1:length(advent1data)) %>% 
+  filter(two > one) %>% 
+  furrr::future_pmap_dfr(.f = ~advent_2(vector = advent1data, lag_1 = .x, lag_2 = .y), .progress = T) 
+  
+answer_2
+```
+
