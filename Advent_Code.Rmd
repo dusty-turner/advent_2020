@@ -13,7 +13,89 @@ knitr::opts_chunk$set(echo = TRUE, warning = F, message = F)
 library(tidyverse)
 ```
 
-## Seventh Day of Advent
+
+```{r}
+library(tidyverse)
+set.seed(256)
+tibble(one = runif(100,0,1), two = runif(100,0,1)) %>% 
+  mutate(two = sort(two))
+```
+
+## Either Day of Advent
+
+```{r}
+input_8 <- tibble(x = read_lines(here::here("data_files", "advent8data.txt")))
+
+current_state <-
+input_8 %>% 
+  extract(x, c("command", "information"), "(.*) (.*)", convert = TRUE) %>% 
+  mutate(current_location = if_else(row_number()==1,1,0)) %>% 
+  mutate(been_here = if_else(row_number()==1,1,0)) %>% 
+  mutate(id = row_number()) %>% 
+  mutate(accumulator = 0) %>% 
+  relocate(id)
+
+log_location <- function(data){
+  out <-
+  data %>% 
+    rowwise() %>% 
+    mutate(been_here = current_location + been_here) %>% 
+    ungroup()
+  return(out)
+}
+
+accumulator_val <- NULL
+
+progress_program <- function(current_state){
+  
+temp <-
+current_state %>% 
+  dplyr::filter(current_location == 1)
+
+if(temp$command == "acc"){
+  current_state <-
+  current_state %>% 
+    mutate(accumulator = accumulator + temp$information) %>% 
+    mutate(current_location =   c(rep(0,temp$id),1,rep(0,nrow(current_state)-temp$id-1))) %>% 
+    log_location()
+  } else if(temp$command == "jmp"){
+  current_state <-
+  current_state %>% 
+    mutate(current_location = c(rep(0,temp$information+temp$id-1),1,rep(0,nrow(current_state)-(temp$information+temp$id)))) %>% 
+    log_location()
+  } else if(temp$command == "nop"){
+    current_state <-
+  current_state %>% 
+    mutate(current_location = c(rep(0,temp$id),1,rep(0,nrow(current_state)-temp$id-1))) %>% 
+    log_location()
+  }
+
+accumulator_val = append(accumulator_val, current_state$accumulator[1])
+print(accumulator_val)
+
+if(current_state %>% filter(been_here > 1) %>% nrow() > 0){
+  print(current_state %>% filter(been_here > 1))
+  done()
+}
+
+return(current_state)
+
+}
+
+while (current_state %>% filter(been_here>1) %>% nrow() == 0
+) {
+  current_state <- progress_program(current_state = current_state)
+}
+
+# progress_program(current_state = current_state)
+
+# accumulate(.x = 1:10, .f = ~progress_program(current_state = current_state))
+
+```
+
+
+
+## Seventh Day of Advent - FAIL
 
 ```{r}
 source(here::here("data_files", "advent7data.R"))
@@ -65,17 +147,78 @@ bag_breakdown <-
   mutate(inner = word(string = inner, start = 2,end = 3)) %>% 
   relocate(id, outter_bag, inner, num_bags)
   
-# test <-
-# bag_breakdown %>% 
-#   filter(outter_bag == "shiny gold") %>% 
-#   # filter(num_bags != 0) %>% 
-#   select(inner, multiplier = num_bags)
+starter <-
+bag_breakdown %>%
+  filter(outter_bag == "shiny gold") %>%
+  # filter(num_bags != 0) %>%
+  select(outter = outter_bag, inner, multiplier = num_bags) %>% 
+  uncount(multiplier) %>% 
+  mutate(total_so_far = nrow(.))
 # 
-# bag_breakdown %>% 
-#   filter(outter_bag %in% test$inner) %>% 
-#   left_join(test, by = c("outter_bag" = "inner"))
+data <- two_deep
+open_bags <- function(data = starter){
+next_level <-
+data %>% 
+  left_join(bag_breakdown, by = c("inner" = "outter_bag")) %>% 
+  select(outter = inner, inner = inner.y, multiplier = num_bags, total_so_far) %>% 
+  mutate(multiplier = if_else(multiplier==0,1,multiplier)) %>% 
+  # as.data.frame() %>% 
+  filter(!is.na(multiplier)) %>% 
+  uncount(multiplier) %>% 
+  mutate(total_so_far = nrow(.) + total_so_far[1])
+return(next_level)
+}
+
+
+open_bags(data = starter) %>% 
+  open_bags() %>%  
+  # as.data.frame()
+  open_bags() %>% 
+  open_bags() %>% 
+  open_bags() %>% 
+  open_bags() %>%
+  open_bags() %>%
+  open_bags()
+
+## Not Correct
+```
+
+## Seventh Day of Advent -- [David Robinson](https://twitter.com/drob/status/1336003816395845632/photo/1)
+
+```{r}
+input <- tibble(x = read_lines(here::here("data_files", "advent7data.txt")))
+
+rules <-
+input %>% 
+  extract(x, c("color", "contents"), "(.*) bags contain (.*)\\.") %>% 
+  separate_rows(contents, sep = ", ") %>% 
+  extract(contents, c("number", "content_color"), "([\\d]*) (.*) bag", convert = TRUE, remove = FALSE) %>% 
+  filter(!is.na(number))
+
+contained_by <- function(cols, ...) {
+  rules %>% 
+    filter(content_color %in% cols) %>% 
+    pull(color)
+} 
+
+accumulate(1:100, contained_by, .init = "shiny gold") %>% 
+  tail(-1) %>% 
+  unlist() %>% 
+  n_distinct()
+
+n_contain <- function(col) {
+  r <- rules %>% 
+    filter(color == col)
+  
+  sum(r$number * (1 + map_dbl(r$content_color, n_contain)))
+  
+}
+
+n_contain(col = "shiny gold")
 
 ```
+
+
 
 ## Sixth Day of Advent
 
