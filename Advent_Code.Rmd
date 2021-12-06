@@ -13,15 +13,1089 @@ knitr::opts_chunk$set(echo = TRUE, warning = F, message = F)
 library(tidyverse)
 ```
 
+## Thirteenth Day of Advent
+
+```{r}
+input_13 <-
+  tibble(x = read_lines(here::here("data_files", "advent13data.txt"))) 
+
+# busses <-
+input_13 %>% 
+  tail(1) %>% 
+  mutate(x = str_remove_all(x, ",x")) %>% 
+  separate_rows(x,sep = ",", convert = T) %>% 
+  rowwise() %>% 
+  mutate(bus_times = str_c(seq(from = 0, to = as.numeric(input_13$x[1])*2, by = x), collapse = ",")) %>% 
+  separate_rows(bus_times, sep = ",", convert = T) %>% 
+  group_by(x) %>% 
+  filter(bus_times > as.numeric(input_13$x[1])) %>% 
+  arrange(bus_times) %>% 
+  mutate(wait_time = bus_times - as.numeric(input_13$x[1])) %>% 
+  mutate(answer = x * wait_time)
+
+
+```
+
+## Twelth Day of Advent
+
+```{r}
+input_12 <-
+  tibble(x = read_lines(here::here("data_files", "advent12data.txt")))
+  # tibble(x = read_lines(here::here("data_files", "advent12data_test.txt")))
+
+
+next_step <-
+input_12 %>% 
+  mutate(direction = str_sub(x,1,1), movement = as.numeric(str_sub(x,2,nchar(x)))) 
+
+
+
+stepper <- function(action, current_location){
+bind_cols(action, current_location) %>% 
+  mutate(east = case_when(direction == "F" & facing == "east" ~ east + movement,
+                           direction == "F" & facing == "west" ~ east - movement,
+                          TRUE ~ east)) %>% 
+  mutate(north = case_when(direction == "F" & facing == "north" ~ north + movement,
+                           direction == "F" & facing == "south" ~ north - movement,
+                           TRUE ~ north)) %>% 
+  mutate(facing = case_when(direction == "L" & facing == "east" & movement == 90 ~ "north",
+                            direction == "L" & facing == "north" & movement == 90 ~ "west",
+                            direction == "L" & facing == "west" & movement == 90 ~ "south",
+                            direction == "L" & facing == "south" & movement == 90 ~ "east",
+                            TRUE ~ facing)) %>% 
+  mutate(facing = case_when(direction == "L" & facing == "east" & movement == 180 ~ "west",
+                            direction == "L" & facing == "north" & movement == 180 ~ "south",
+                            direction == "L" & facing == "west" & movement == 180 ~ "east",
+                            direction == "L" & facing == "south" & movement == 180 ~ "north",
+                            TRUE ~ facing)) %>% 
+  mutate(facing = case_when(direction == "L" & facing == "east" & movement == 270 ~ "south",
+                            direction == "L" & facing == "north" & movement == 270 ~ "east",
+                            direction == "L" & facing == "west" & movement == 270 ~ "north",
+                            direction == "L" & facing == "south" & movement == 270 ~ "west",
+                            TRUE ~ facing)) %>% 
+  mutate(facing = case_when(direction == "R" & facing == "east" & movement == 90 ~ "south",
+                            direction == "R" & facing == "south" & movement == 90 ~ "west",
+                            direction == "R" & facing == "west" & movement == 90 ~ "north",
+                            direction == "R" & facing == "north" & movement == 90 ~ "east",
+                            TRUE ~ facing)) %>% 
+  mutate(facing = case_when(direction == "R" & facing == "east" & movement == 180 ~ "west",
+                            direction == "R" & facing == "south" & movement == 180 ~ "north",
+                            direction == "R" & facing == "west" & movement == 180 ~ "east",
+                            direction == "R" & facing == "north" & movement == 180 ~ "south",
+                            TRUE ~ facing)) %>% 
+  mutate(facing = case_when(direction == "R" & facing == "east" & movement == 270 ~ "north",
+                            direction == "R" & facing == "south" & movement == 270 ~ "east",
+                            direction == "R" & facing == "west" & movement == 270 ~ "south",
+                            direction == "R" & facing == "north" & movement == 270 ~ "west",
+                            TRUE ~ facing)) %>% 
+  mutate(north = case_when(direction == "N" ~ north + movement,
+                          direction == "S"~ north - movement,
+                          TRUE ~ north)) %>% 
+  mutate(east = case_when(direction == "E" ~ east + movement,
+                          direction == "W"~ east - movement,
+                          TRUE ~ east))
+}
+  
+
+current_location <- tibble(east = 0, north = 0, facing = "east")
+
+i <- 1
+
+
+for (i in 1:nrow(next_step)) {
+# for (i in 1:20) {
+# print(i)  
+
+# print(next_step[i,])
+  
+last_input <-
+  current_location %>% tail(1) %>% 
+stepper(action = next_step[i,]) %>% 
+  select(east,north,facing)
+
+current_location <- 
+  current_location %>% bind_rows(last_input)
+
+# print(current_location)
+}
+
+## answer
+current_location %>% 
+  tail(1) %>% 
+  mutate(man_dist = abs(east)+abs(north))
+
+
+## drob's stuff
+
+instructions <-
+input_12 %>% 
+    mutate(instruction = str_sub(x,1,1), amount = as.numeric(str_sub(x,2,nchar(x)))) 
+
+direction <- c("E", "S", "W", "N")
+
+changes <-
+tribble(~ direction, ~ x_change, ~ y_change,
+"E",1,0,
+"S",0,-1,
+"W",-1,0,
+"N",0,1)
+
+drob <-
+instructions %>% 
+  select(-x) %>% 
+  mutate(angle_change = case_when(instruction == "L" ~ -amount/90,
+                                  instruction == "R" ~ amount/90,
+                                  TRUE ~ 0),
+         facing = directions[1 + cumsum(angle_change) %% 4],
+         direction = ifelse(instruction == "F", facing, instruction)) %>% 
+  left_join(changes, by = "direction") %>% 
+  replace_na(list(x_change = 0, y_change = 0)) %>% 
+  mutate(x = cumsum(x_change * amount),
+         y = cumsum(y_change * amount)) %>% 
+  mutate(iteration = row_number()) 
+  # slice(1:20)
+
+bind_cols(
+  bind_rows(tibble(x=0,y=0), drob),
+  current_location,
+) %>% 
+  relocate(x,y,east,north) %>% tail() %>% 
+  mutate(man_dist = abs(east)+abs(north))
+  # filter(row_number() %in% 10:20)
+
+```
+
+
+```{r}
+input_12
+
+next_step <-
+input_12 %>% 
+  mutate(direction = str_sub(x,1,1), movement = as.numeric(str_sub(x,2,nchar(x)))) 
+
+current_location <- tibble(east = 0, north = 0, facing = "east", way_east = 10, way_north = 1)
+
+action <- next_step[1,]
+
+stepper(action = action,current_location = current_location)
+
+stepper <- function(action, current_location){
+bind_cols(action, current_location) %>%
+  mutate(prev_way_east = way_east, prev_way_north = way_north) %>% 
+  mutate(prev_east = east, prev_north = north) %>% 
+  mutate(east = case_when(direction == "F" ~ prev_east + movement*prev_way_east,
+                          TRUE ~ east)) %>% 
+  mutate(north = case_when(direction == "F" ~ prev_north + movement*prev_way_north,
+                          TRUE ~ north)) %>% 
+  mutate(way_north = case_when(direction == "N" ~ prev_way_north + movement,
+                               direction == "S" ~ prev_way_north - movement,
+                               TRUE ~ way_north)) %>% 
+  mutate(way_east = case_when(direction == "E" ~ prev_way_east + movement,
+                               direction == "W" ~ prev_way_east - movement,
+                               TRUE ~ way_east)) %>% 
+  mutate(way_north = case_when(direction == "L" & movement == 90 ~ prev_way_east,
+                               direction == "L" & movement == 180 ~ -1 * prev_way_north,
+                               direction == "L" & movement == 270 ~ -1 * prev_way_east,
+                               TRUE ~ way_north
+                               )) %>% 
+  mutate(way_north = case_when(direction == "R" & movement == 90 ~ -1 * prev_way_east,
+                               direction == "R" & movement == 180 ~ -1 * prev_way_north,
+                               direction == "R" & movement == 270 ~ prev_way_east,
+                               TRUE ~ way_north
+                               )) %>% 
+  mutate(way_east = case_when(direction == "L" & movement == 90 ~ -1 * prev_way_north,
+                               direction == "L" & movement == 180 ~ -1 * prev_way_east,
+                               direction == "L" & movement == 270 ~ prev_way_north,
+                               TRUE ~ way_east
+                               )) %>% 
+  mutate(way_east = case_when(direction == "R" & movement == 90 ~ prev_way_north,
+                               direction == "R" & movement == 180 ~ -1 * prev_way_east,
+                               direction == "R" & movement == 270 ~ -1 * prev_way_north,
+                               TRUE ~ way_east
+                               )) 
+
+  
+}
+  
+current_location <- tibble(east = 0, north = 0, facing = "east", way_east = 10, way_north = 1)
+
+i <- 1
+
+
+for (i in 1:nrow(next_step)) {
+# for (i in 1:20) {
+# print(i)  
+
+# print(next_step[i,])
+  
+last_input <-
+  current_location %>% tail(1) %>% 
+stepper(action = next_step[i,]) %>% 
+  select(east,north,facing, way_east, way_north)
+
+current_location <- 
+  current_location %>% bind_rows(last_input)
+
+# print(current_location)
+}
+
+## answer
+current_location %>% 
+  tail(1) %>% 
+  mutate(man_dist = abs(east)+abs(north))
+
+
+```
+
+
+## Eleventh Day of Advent
+
+```{r}
+library(tidytext)
+input_11 <-
+  # tibble(x = read_lines(here::here("data_files", "advent11data.txt")))
+  tibble(x = read_lines(here::here("data_files", "advent11data.txt")))
+
+data <-
+input_11 %>%
+  mutate(row = row_number()) %>% 
+  relocate(row) %>%
+  mutate(x = str_replace_all(string = x, pattern = "\\.", "x")) %>% 
+  unnest_characters(character, x) %>% 
+  group_by(row) %>% 
+  mutate(col = row_number()) %>% 
+  ungroup() %>% 
+  pivot_wider(names_from = col, values_from = character) %>% 
+  janitor::clean_names() %>% 
+  select(-row)
+
+counter <- function(row, col, input = data){
+input %>% 
+  filter(row_number() %in% c((row-1):(row+1))) %>% 
+  select(any_of(c((col-1):(col+1)))) %>% 
+  pivot_longer(cols = everything()) %>% 
+  count(value)
+}
+
+# data[row_of_interest,col_of_interest]
+
+# counter(row = row_of_interest, col = col_of_interest)
+
+assign_seat <- function(row = row_of_interest, col = col_of_interest, input = data) {
+  if (unlist(input[row, col]) == "l") {
+    temp <-
+      counter(row = row, col = col, input = input) %>%
+      filter(value == "#") %>% pull(n) %>% is_empty()
+    new_seat_type <- if_else(temp,"#", "l")
+  } else if (unlist(input[row, col]) == "#") {
+    new_seat_type <-
+      counter(row = row, col = col, input = input) %>%
+      filter(value == "#") %>%
+      mutate(n = n-1) %>% 
+      summarise(seat = if_else(n >= 4, "l", "#")) %>%
+      pull(seat)
+  } else{
+    new_seat_type <- "x"
+  }
+  return(new_seat_type)
+  
+  # new_data[row,col] <- new_seat_type
+  
+  return(new_data)
+}
+
+# row_of_interest <- 3
+# col_of_interest <- 1
+# 
+# data
+# 
+# assign_seat(row = row_of_interest, col = col_of_interest, input = data)
+
+# list_x <- rep(1:nrow(data),ncol(data)) %>% sort()
+# list_y <- rep(1:nrow(data),ncol(data))
+list_x <- rep(1:nrow(data),ncol(data)) %>% sort()
+list_y <- rep(1:ncol(data),nrow(data))
+
+# x <- list_x
+# y <- list_y
+
+library(furrr)
+plan(multiprocess)
+
+iterate <- function(input, x, y){
+  output <-
+future_map2_chr(.x = x,.y = y, .f = ~assign_seat(row = .x,col = .y,input = input),.progress = T) %>% 
+  matrix(nrow = nrow(input), byrow = T) %>% as.data.frame() %>% magrittr::set_colnames(colnames(input))
+
+  occupied <-
+  tibble(output) %>% 
+    pivot_longer(cols = everything()) %>% 
+    count(value) %>% filter(value == "#") %>% 
+    pull(n)
+
+  # print(output)  
+message(str_c("data frames are identical: ", identical(input,output), " with occupied = ", occupied))
+  return(output)  
+  
+}
+
+
+# iterate(input = data,x = x, y = y)
+
+data %>% 
+iterate(x = list_x, y = list_y) %>% #1
+iterate(x = list_x, y = list_y) %>% #2
+iterate(x = list_x, y = list_y) %>% #3
+iterate(x = list_x, y = list_y) %>%  
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y)     #9
+
+.Last.value %>% 
+iterate(x = list_x, y = list_y) %>% #10
+iterate(x = list_x, y = list_y) %>% #11
+iterate(x = list_x, y = list_y) %>% #12
+iterate(x = list_x, y = list_y) %>%  
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y)     #9
+
+.Last.value %>% 
+iterate(x = list_x, y = list_y) %>% #10
+iterate(x = list_x, y = list_y) %>% #11
+iterate(x = list_x, y = list_y) %>% #12
+iterate(x = list_x, y = list_y) %>%  
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y) %>% #10
+iterate(x = list_x, y = list_y) %>% #11
+iterate(x = list_x, y = list_y) %>% #12
+iterate(x = list_x, y = list_y) %>%  
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y) %>% #10
+iterate(x = list_x, y = list_y) %>% #11
+iterate(x = list_x, y = list_y) %>% #12
+iterate(x = list_x, y = list_y) %>%  
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y) %>% #10
+iterate(x = list_x, y = list_y) %>% #11
+iterate(x = list_x, y = list_y) %>% #12
+iterate(x = list_x, y = list_y) %>%  
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y) %>% #10
+iterate(x = list_x, y = list_y) %>% #11
+iterate(x = list_x, y = list_y) %>% #12
+iterate(x = list_x, y = list_y) %>%  
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y) %>% #10
+iterate(x = list_x, y = list_y) %>% #11
+iterate(x = list_x, y = list_y) %>% #12
+iterate(x = list_x, y = list_y) %>%  
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y) %>% #10
+iterate(x = list_x, y = list_y) %>% #11
+iterate(x = list_x, y = list_y) %>% #12
+iterate(x = list_x, y = list_y) %>%  
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y) %>% #10
+iterate(x = list_x, y = list_y) %>% #11
+iterate(x = list_x, y = list_y) %>% #12
+iterate(x = list_x, y = list_y) %>%  
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y) %>% #10
+iterate(x = list_x, y = list_y) %>% #11
+iterate(x = list_x, y = list_y) %>% #12
+iterate(x = list_x, y = list_y) %>%  
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y) %>% #10
+iterate(x = list_x, y = list_y) %>% #11
+iterate(x = list_x, y = list_y) %>% #12
+iterate(x = list_x, y = list_y) %>%  
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y) %>% #10
+iterate(x = list_x, y = list_y) %>% #11
+iterate(x = list_x, y = list_y) %>% #12
+iterate(x = list_x, y = list_y) %>%  
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y) %>% 
+iterate(x = list_x, y = list_y)     #9
+
+result <- .Last.value
+
+```
+
+## Eleven B
+
+```{r}
+
+# data <- data_backup 
+
+# row <- 7
+# col <- 5
+
+
+# counter_b(row = 1,col = 1, input = data)
+
+counter_b <- function(row, col, input = data) {
+  # check right
+  i = 1
+  check = "x"
+  occupied_counter <- 0
+  empty_counter <- 0
+  while (check == "x" & (col + i) <= ncol(input)) {
+    check =
+      input %>%
+      filter(row_number() %in% row) %>%
+      select(any_of(col + i)) %>%
+      pull()
+    
+    i = i + 1
+    occupied_counter = occupied_counter + (check == "#")
+    empty_counter = empty_counter + (check == "l")
+    # print(i)
+  }
+  
+  # checks left
+  i = 1
+  check = "x"
+  while (check == "x" & (col - i) >= 1) {
+    check =
+      input %>%
+      filter(row_number() %in% row) %>%
+      select(any_of(col - i)) %>%
+      pull()
+    
+    i = i + 1
+    occupied_counter = occupied_counter + (check == "#")
+    empty_counter = empty_counter + (check == "l")
+    # print(i)
+  }
+  
+  # checks down
+  i = 1
+  check = "x"
+  while (check == "x" & (row + i) <= nrow(input)) {
+    check =
+      input %>%
+      select(any_of(col)) %>%
+      filter(row_number() %in% (row + i)) %>%
+      pull()
+    
+    i = i + 1
+    occupied_counter = occupied_counter + (check == "#")
+    empty_counter = empty_counter + (check == "l")
+    # print(i)
+  }
+  
+  # checks up
+  i = 1
+  check = "x"
+  while (check == "x" & (row - i) >= 1) {
+    check =
+      input %>%
+      select(any_of(col)) %>%
+      filter(row_number() %in% (row - i)) %>%
+      pull()
+    
+    i = i + 1
+    occupied_counter = occupied_counter + (check == "#")
+    empty_counter = empty_counter + (check == "l")
+    # print(i)
+  }
+  
+  # checks down right
+  i = 1
+  check = "x"
+  while (check == "x" &
+         (row + i) <= nrow(input) & (col + i) <= ncol(input)) {
+    check =
+      input %>%
+      select(any_of(col + i)) %>%
+      filter(row_number() %in% (row + i)) %>%
+      pull()
+    
+    i = i + 1
+    occupied_counter = occupied_counter + (check == "#")
+    empty_counter = empty_counter + (check == "l")
+    # print(i)
+  }
+  
+  # checks up right
+  i = 1
+  check = "x"
+  while (check == "x" & (row - i) >= 1 & (col + i) <= ncol(input)) {
+    check =
+      input %>%
+      select(any_of(col + i)) %>%
+      filter(row_number() %in% (row - i)) %>%
+      pull()
+    
+    i = i + 1
+    occupied_counter = occupied_counter + (check == "#")
+    empty_counter = empty_counter + (check == "l")
+    # print(i)
+  }
+  
+  # checks down left
+  i = 1
+  check = "x"
+  while (check == "x" & (row + i) <= nrow(input) & (col - i) >= 1) {
+    check =
+      input %>%
+      select(any_of(col - i)) %>%
+      filter(row_number() %in% (row + i)) %>%
+      pull()
+    
+    i = i + 1
+    occupied_counter = occupied_counter + (check == "#")
+    empty_counter = empty_counter + (check == "l")
+    # print(i)
+  }
+  
+  # checks up left
+  i = 1
+  check = "x"
+  while (check == "x" & (row - i) >= 1 & (col - i) >= 1) {
+    check =
+      input %>%
+      select(any_of(col - i)) %>%
+      filter(row_number() %in% (row - i)) %>%
+      pull()
+    
+    i = i + 1
+    occupied_counter = occupied_counter + (check == "#")
+    empty_counter = empty_counter + (check == "l")
+    # print(i)
+  }
+
+  
+    
+return(list(occupied_counter = occupied_counter, empty_counter = empty_counter))
+  
+}
+
+assign_seat_b <- function(row, col, input = data) {
+  
+  seat_type =
+    input %>%
+    filter(row_number() == row) %>%
+    select(any_of(col)) %>%
+    pull()
+  
+  if(seat_type == "x")  {
+    new_seat = "x"
+  } else if(seat_type == "#"){
+    counted <- counter_b(row = row, col = col, input = input)$occupied_counter
+    if(counted >=5){new_seat = "l"} else{new_seat = "#"}
+  } else if(seat_type == "l"){
+    counted <- counter_b(row = row, col = col, input = input)$occupied_counter
+    if(counted == 0){new_seat = "#"} else{new_seat = "l"}
+  }
+  
+  return(new_seat)
+    
+}
+
+# assign_seat_b(row = 1,col = 2,input = data)
+
+library(furrr)
+plan(multiprocess)
+
+row_list <- rep(1:nrow(data),ncol(data)) %>% sort()
+col_list <- rep(1:ncol(data),nrow(data))
+
+
+iterate_b <- function(input, x, y){
+  output <-
+future_map2_chr(.x = x,.y = y, .f = ~assign_seat_b(row = .x,col = .y,input = input),.progress = T) %>% 
+  matrix(nrow = nrow(input), byrow = T) %>% as.data.frame() %>% magrittr::set_colnames(colnames(input))
+
+  occupied <-
+  tibble(output) %>%
+    pivot_longer(cols = everything()) %>%
+    count(value) %>% filter(value == "#") %>%
+    pull(n)
+
+  # print(output)
+message(str_c("data frames are identical: ", identical(input,output), " with occupied = ", occupied))
+  return(output)
+
+}
+
+data %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) 
+
+.Last.value %>% 
+  iterate_b(x = row_list, y = col_list)
+
+.Last.value %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>%
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>%
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>%
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>%
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>%
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>%
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>%
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>%
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>%
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>%
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>%
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>%
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>%
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>%
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>%
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>%
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>%
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>%
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>%
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>%
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>%
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>%
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>%
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>%
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>%
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>%
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>%
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>%
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>%
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list) %>% 
+  iterate_b(x = row_list, y = col_list)
+  
+
+```
+
+
+
+
+## Tenth Day of Advent
 
 ```{r}
 library(tidyverse)
-set.seed(256)
-tibble(one = runif(100,0,1), two = runif(100,0,1)) %>% 
-  mutate(two = sort(two))
+library(compositions)
+
+input_10 <-
+  tibble(x = read_lines(here::here("data_files", "advent10data.txt"))) %>% 
+  mutate(x = as.numeric(x)) %>% 
+  arrange(x) 
+
+input_10 %>% 
+  mutate(lag = lag(x,1)) %>% 
+  mutate(lag = replace_na(lag, 0)) %>% 
+  mutate(diff = x-lag) %>% 
+  count(diff) %>%
+  mutate(n = ifelse(diff == 3, n + 1, n)) %>% 
+  summarise(prod = prod(n))
+
+
+unbinary(str_c(rep(1,10),collapse = ""))
+
+unbinary(good_breaks$option[1])
+unbinary("0001111111")
+
+ten_string(192)
+
+ten_string <- function(num) {
+  rev(as.numeric(intToBits(num))[1:10])
+}
+
+
+
+checker_initial <- function(num = 192, batch = 1) {
+  
+  sample <- ten_string(num = num)
+  
+  sample_length <- length(sample)
+  
+  beginning <- sample[1] + sample[2] + sample[3] 
+  end <- sample[10] + sample[9] + sample[8] 
+  
+  check <-
+    input_10 %>%
+    slice(((batch*sample_length)-(sample_length - 1)):(batch*sample_length)) %>%
+    mutate(sample = sample) %>%
+    filter(sample == 1) %>% 
+    mutate(lag = lag(x, 1)) %>%
+    mutate(lag = replace_na(lag, x[1])) %>%
+    mutate(diff = x - lag) %>%
+    summarise(max_diff = max(diff))
+  
+  if (check$max_diff <= 3 & sum(sample) > 1 & beginning > 0 & end > 0) {
+    option <- tibble(option = str_c(sample, collapse = ""), batch = batch)
+    return(option)
+  } else {
+    option <- tibble(option = as.character("2222222222"), batch = batch)
+    return(option)
+  }
+  
+}
+
 ```
 
-## Either Day of Advent
+
+```{r}
+library(tidyverse)
+library(compositions)
+
+input_10 <-
+  tibble(x = read_lines(here::here("data_files", "advent10data.txt"))) %>% 
+  # tibble(x = read_lines(here::here("data_files", "advent10data_test.txt"))) %>% 
+  mutate(x = as.numeric(x)) %>% 
+  arrange(x) 
+
+test <-
+input_10 %>% 
+  mutate(id = row_number()) %>% 
+  relocate(id) %>% 
+  # bind_rows(tibble(id = c(0), x = c(0))) %>%
+  # bind_rows(tibble(id = c(0,max(row_number(.)-1)), x = c(0,max(input_10$x)+1))) %>%
+  bind_rows(tibble(id = c(0), x = c(0))) %>%
+  arrange(id) %>% 
+  mutate(lag = x-lag(x, 1)) %>% 
+  mutate(lead = lead(x, 1)-x) %>% 
+  rowwise() %>% 
+  mutate(diff = max(lag,lead,na.rm = T)) %>% 
+  ungroup() %>% as.data.frame() %>% 
+  slice(-c(1,max(row_number()))) %>% 
+  select(id,x,diff)
+  # tail()
+  # I()
+
+as.data.frame(test)
+
+tibble(
+lengths = rle(test$diff)$lengths,
+values = rle(test$diff)$values
+) %>% 
+  filter(values !=3) %>% 
+  mutate(combinations = case_when(lengths == 4 ~ length_4,
+                                  lengths == 3 ~ length_3,
+                                  lengths == 2 ~ length_2,
+                                  lengths == 1 ~ length_1)) %>% 
+  pull(combinations) %>% prod()
+
+
+length_4 <- choose(n = 4,k = 4) + choose(n = 4,k = 3) + choose(n = 4,k = 2) + choose(n = 4,k = 1) - 3
+length_3 <- choose(n = 3,k = 3) + choose(n = 3,k = 2) + choose(n = 3,k = 1)
+length_2 <- choose(n = 2,k = 2) + choose(n = 2,k = 1) + choose(n = 2,k = 0)
+length_1 <- choose(n = 1,k = 1) + choose(n = 1,k = 0)
+
+7*7*4*2*7*12
+7*7*4*2*7*11
+7*7*4*2*7*10
+7*7*4*2*7*9
+7*7*4*2*7*8
+7*7*4*2*7*7
+
+
+
+19208
+```
+
+
+
+## Ninth Day of Advent
+
+```{r}
+library(furrr)
+plan(multiprocess)
+
+input_9 <-
+  tibble(x = read_lines(here::here("data_files", "advent9data.txt"))) %>%
+  mutate(id = row_number()) %>%
+  relocate(id, x) %>% 
+  mutate(x = as.numeric(x))
+
+
+search_function <- function(search_value){
+
+value_of_interest <-
+input_9 %>% 
+  filter(id == search_value) %>% 
+  pull(x)
+
+search <-
+input_9 %>%
+  filter(id %in% c((search_value-25):(search_value-1))) %>%
+  mutate(y = x) %>% 
+  expand(x,y) %>% 
+  distinct() %>% 
+  mutate(z = x+y) %>% 
+  filter(z == value_of_interest) %>% 
+  count(z) %>% 
+  mutate(search_value) %>% 
+  relocate(search_value, z, n)
+
+return(search)
+}
+
+solution <-
+26:1000 %>% future_map_dfr(.f = ~search_function(search_value = .x), .progress = T)
+
+# 506
+
+solution %>% 
+  mutate(missing = search_value - lag(search_value,1)) %>% 
+  arrange(search_value) %>% 
+  filter(search_value %in% 500:510)
+
+input_9 %>% 
+  filter(id == 503)
+
+search_function(search_value = 289)
+
+```
+
+```{r}
+num_of_interest <- 15353384
+
+searcher <- function(num_rows_to_search){
+
+input_9 %>% 
+  mutate(group_sum = c(rep(0,num_rows_to_search-1),zoo::rollsum(x,num_rows_to_search))) %>%
+  mutate(num_rows_to_search = num_rows_to_search) %>% 
+  filter(group_sum == num_of_interest)
+  
+}
+
+num_rows_to_search = 17
+
+part_b_solution <-
+2:499 %>% 
+purrr::map_dfr(.f = ~searcher(num_rows_to_search = .x))
+
+
+input_9 %>% 
+  mutate(group_sum = c(rep(0,num_rows_to_search-1),zoo::rollsum(x,num_rows_to_search))) %>%
+  mutate(num_rows_to_search = num_rows_to_search) %>% 
+  filter(id %in% c((part_b_solution$id-(num_rows_to_search[1]-1)):part_b_solution$id)) %>% 
+  mutate(test = sum(x)) %>% 
+  summarise(range = range(x)) %>% 
+  summarise(total = sum(range))
+
+```
+
+
+## Eigth Day of Advent
 
 ```{r}
 input_8 <- tibble(x = read_lines(here::here("data_files", "advent8data.txt")))
@@ -47,7 +1121,7 @@ log_location <- function(data){
 accumulator_val <- NULL
 
 progress_program <- function(current_state){
-  
+
 temp <-
 current_state %>% 
   dplyr::filter(current_location == 1)
@@ -78,18 +1152,60 @@ if(current_state %>% filter(been_here > 1) %>% nrow() > 0){
   done()
 }
 
+if(current_state %>% filter(current_location == 1) %>% pull(id) ==625 ){
+    print(str_c(current_state$accumulator[1], " on row 625"))
+  done()
+}
+
 return(current_state)
 
 }
 
-while (current_state %>% filter(been_here>1) %>% nrow() == 0
-) {
+while (current_state %>% filter(been_here>1) %>% nrow() == 0) {
   current_state <- progress_program(current_state = current_state)
 }
 
-# progress_program(current_state = current_state)
+###
 
-# accumulate(.x = 1:10, .f = ~progress_program(current_state = current_state))
+try_row_fun <-function(try_row = try_row){
+
+try_row = 298
+
+current_state <-
+input_8 %>% 
+  extract(x, c("command", "information"), "(.*) (.*)", convert = TRUE) %>% 
+  mutate(current_location = if_else(row_number()==1,1,0)) %>% 
+  mutate(been_here = if_else(row_number()==1,1,0)) %>% 
+  mutate(id = row_number()) %>% 
+  mutate(accumulator = 0) %>% 
+  relocate(id)
+
+
+if(current_state %>% filter(id == try_row) %>% select(command) %>% pull(command) == "acc") {
+  print(str_c("acc with try_row at ", try_row))
+} else {
+  print(str_c("try row at ", try_row))
+  begin_altered <-
+    current_state %>%
+    mutate(command = if_else(id == try_row, if_else(command == "jmp", "nop", "jmp"), command))
+  
+  while (begin_altered %>% filter(been_here > 1) %>% nrow() == 0) {
+    begin_altered <- progress_program(current_state = begin_altered)
+  }
+  
+  if (current_state %>% filter(current_location == 1) %>% pull(id) == 625) {
+    stop("test")
+  }
+  
+}
+
+}
+
+298:625 %>% purrr::map(~try_row_fun(try_row = .x))
+
+try_row_fun(try_row = 5)
+
+## its 1030 on iteration 298 -- found out because the program errored
 
 ```
 
